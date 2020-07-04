@@ -1,6 +1,6 @@
 # Pdf2Img
 ### Made with ❤️ towards Privacy ⭐
-- Works in the browser itself 🌐
-- Nothing is uploaded to the server 📤
+- Works within your browser 🌐
+- Data stays in your PC, Nothing is uploaded 📤❌
 - No tracking & No ads 🚫
 - Instant conversion ⚡
