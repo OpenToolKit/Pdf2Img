@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Pdf2Img - Convert Pdf to PNG/JPEG in your browser!</title>
+  <meta name="description"
+    content="Free, In-browser, Privacy friendly PDF to image convertor. Supports JPG/JPEG,PNG Image file formats. Your files doesn't leave your browser.">
+  <link rel="shortcut icon" type="image/x-icon" href="pdf2img-favicon.ico">
+  <link rel="icon" type="image/x-icon" href="pdf2img-favicon.ico">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;1,100;1,200;1,300&display=swap"
+    rel="stylesheet">
+  <script src="js/pdf.min-2.5.207.js"></script>
+  <script src="js/jszip.min-3.5.0.js"></script>
+  <script src="js/FileSaver.min-3.5.0.js"></script>
+</head>
+
+<body>
+  <div id="home_grid">
+    <div id="params_div_container" class="home_grid_item">
+      <div id="params_div">
+        <div style="text-align: center;">
+          <h1 id="title">Pdf2Img</h1>
+          <h6 id="caption">Made with ❤️ towards Privacy 🔒</h6>
+        </div>
+        <div style="text-align: center;">
+          <img style="width: 20vw;margin: 1vmax;" alt="logo" src="placeholder/hero.svg">
+        </div>
+        <div id="pdf_params_divs_container">
+          <div class="pdf_params_divs">
+            <label for="pdf_input">Input file: </label>
+            <button id="pdf_input_overlay">Select PDF</button>
+            <input id="pdf_input" type="file" accept="application/pdf" style="display:none;">
+            <output style="font-size: xx-small;" id="selected_file_name" for="pdf_input_overlay"></output>
+          </div>
+          <div class="pdf_params_divs">
+            <label for="format_select">Output image format: </label>
+            <select id="format_select">
+              <option value="image/png" selected>PNG</option>
+              <option value="image/jpeg">JPEG</option>
+            </select>
+          </div>
+          <div class="pdf_params_divs">
+            <label for="scale_input">PDF page scale factor: </label>
+            <input class="text_input" id="scale_input" type="range" min="0.5" max="15" value="1" step="0.5">
+            <output style="font-size: small;" id="output_scale_input" for="scale_input">1</output>
+          </div>
+          <div class="pdf_params_divs">
+            <label for="quality_input">Output image quality multiplier: </label>
+            <input class="text_input" id="quality_input" type="range" min="0" max="1" value="0.8" step="0.1">
+            <output style="font-size: small;" id="output_quality_input" for="quality_input">0.8</output>
+          </div>
+          <div style="text-align: center;">
+            <button id="convert_pdf">Convert to Image(s)</button>
+          </div>
+        </div>
+        <div style="text-align: center;">
+          <img id="gh_logo" src="placeholder/gh-mark.png" alt="Github logo"
+            onclick="window.location= 'https://github.com/OpenToolKit/Pdf2Img';">
+        </div>
+      </div>
+    </div>
+    <div class="home_grid_item">
+      <div id="flex_layout">
+        <div id="pdf_preview_container">
+          <iframe id="pdf_preview" src="placeholder/preview.pdf#toolbar=0"> </iframe>
+        </div>
+        <div id="acrylic_container">
+          <div id="log">
+            <li style="list-style: none; font-family: Consolas,SFMono-Regular,Liberation Mono,Menlo,monospace">
+              [Conversion log]
+            </li>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="max-width: 0px;max-height: 0px;overflow: hidden;">
+    <canvas id="page_canvas" style="border: 0px solid black; direction: ltr;"></canvas>
+  </div>
+  <style>
+    body {
+      background-color: #33333d;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%231eb980' fill-opacity='0.28'%3E%3Cpath opacity='.5' d='M96 95h4v1h-4v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4h-9v4h-1v-4H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15v-9H0v-1h15V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h9V0h1v15h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9h4v1h-4v9zm-1 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm9-10v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-10 0v-9h-9v9h9zm-9-10h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9zm10 0h9v-9h-9v9z'/%3E%3Cpath d='M6 5V0H5v5H0v1h5v94h1V6h94V5H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      margin-right: 2vw;
+      margin-left: 2vw;
+      margin-top: 1.5vh;
+    }
+
+    #title {
+      font-family: 'IBM Plex Sans', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      font-style: italic;
+      font-weight: 300;
+      font-size: 2.5em;
+      color: cornsilk;
+      margin: 3vh 0 0 0;
+    }
+
+    #caption {
+      font-family: 'IBM Plex Sans', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      font-style: normal;
+      font-weight: 200;
+      color: cornsilk;
+      margin: 0 0 2vh 0;
+    }
+
+    #home_grid {
+      display: grid;
+      grid-column-gap: 20px;
+      grid-row-gap: 10px;
+      grid-template-rows: auto;
+      grid-template-columns: repeat(auto-fill, minmax(453px, 1fr));
+      padding: 10px;
+    }
+
+    #params_div_container {
+      background-color: #045d56;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2000 1500'%3E%3Cdefs%3E%3CradialGradient id='a' gradientUnits='objectBoundingBox'%3E%3Cstop offset='0' stop-color='%231eb980'/%3E%3Cstop offset='1' stop-color='%23045d56'/%3E%3C/radialGradient%3E%3ClinearGradient id='b' gradientUnits='userSpaceOnUse' x1='0' y1='750' x2='1550' y2='750'%3E%3Cstop offset='0' stop-color='%23118b6b'/%3E%3Cstop offset='1' stop-color='%23045d56'/%3E%3C/linearGradient%3E%3Cpath id='s' fill='url(%23b)' d='M1549.2 51.6c-5.4 99.1-20.2 197.6-44.2 293.6c-24.1 96-57.4 189.4-99.3 278.6c-41.9 89.2-92.4 174.1-150.3 253.3c-58 79.2-123.4 152.6-195.1 219c-71.7 66.4-149.6 125.8-232.2 177.2c-82.7 51.4-170.1 94.7-260.7 129.1c-90.6 34.4-184.4 60-279.5 76.3C192.6 1495 96.1 1502 0 1500c96.1-2.1 191.8-13.3 285.4-33.6c93.6-20.2 185-49.5 272.5-87.2c87.6-37.7 171.3-83.8 249.6-137.3c78.4-53.5 151.5-114.5 217.9-181.7c66.5-67.2 126.4-140.7 178.6-218.9c52.3-78.3 96.9-161.4 133-247.9c36.1-86.5 63.8-176.2 82.6-267.6c18.8-91.4 28.6-184.4 29.6-277.4c0.3-27.6 23.2-48.7 50.8-48.4s49.5 21.8 49.2 49.5c0 0.7 0 1.3-0.1 2L1549.2 51.6z'/%3E%3Cg id='g'%3E%3Cuse href='%23s' transform='scale(0.12) rotate(60)'/%3E%3Cuse href='%23s' transform='scale(0.2) rotate(10)'/%3E%3Cuse href='%23s' transform='scale(0.25) rotate(40)'/%3E%3Cuse href='%23s' transform='scale(0.3) rotate(-20)'/%3E%3Cuse href='%23s' transform='scale(0.4) rotate(-30)'/%3E%3Cuse href='%23s' transform='scale(0.5) rotate(20)'/%3E%3Cuse href='%23s' transform='scale(0.6) rotate(60)'/%3E%3Cuse href='%23s' transform='scale(0.7) rotate(10)'/%3E%3Cuse href='%23s' transform='scale(0.835) rotate(-40)'/%3E%3Cuse href='%23s' transform='scale(0.9) rotate(40)'/%3E%3Cuse href='%23s' transform='scale(1.05) rotate(25)'/%3E%3Cuse href='%23s' transform='scale(1.2) rotate(8)'/%3E%3Cuse href='%23s' transform='scale(1.333) rotate(-60)'/%3E%3Cuse href='%23s' transform='scale(1.45) rotate(-30)'/%3E%3Cuse href='%23s' transform='scale(1.6) rotate(10)'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='translate(1020 0)'%3E%3Cg transform='translate(0 705)'%3E%3Ccircle fill='url(%23a)' r='3000'/%3E%3Cg opacity='0.5'%3E%3Ccircle fill='url(%23a)' r='2000'/%3E%3Ccircle fill='url(%23a)' r='1800'/%3E%3Ccircle fill='url(%23a)' r='1700'/%3E%3Ccircle fill='url(%23a)' r='1651'/%3E%3Ccircle fill='url(%23a)' r='1450'/%3E%3Ccircle fill='url(%23a)' r='1250'/%3E%3Ccircle fill='url(%23a)' r='1175'/%3E%3Ccircle fill='url(%23a)' r='900'/%3E%3Ccircle fill='url(%23a)' r='750'/%3E%3Ccircle fill='url(%23a)' r='500'/%3E%3Ccircle fill='url(%23a)' r='380'/%3E%3Ccircle fill='url(%23a)' r='250'/%3E%3C/g%3E%3Cg transform='rotate(-169.2 0 0)'%3E%3Cuse href='%23g' transform='rotate(10)'/%3E%3Cuse href='%23g' transform='rotate(120)'/%3E%3Cuse href='%23g' transform='rotate(240)'/%3E%3C/g%3E%3Ccircle fill-opacity='0.27' fill='url(%23a)' r='3000'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      background-attachment: fixed;
+      background-size: cover;
+      border-radius: 10px;
+    }
+
+    #params_div {
+      backdrop-filter: blur(5px) saturate(125%);
+      background: rgba(0, 0, 0, 0.1);
+      max-width: 100%;
+      height: 97%;
+      min-height: 80vh;
+      border-radius: 10px;
+      padding: 5px;
+      color: cornsilk;
+      border: 4px solid rgb(30, 185, 128);
+      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+      position: relative;
+    }
+
+    .pdf_params_divs {
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-size: small;
+      font-weight: normal;
+      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+    }
+
+    #format_select {
+      margin: 0px 15px;
+      background: rgb(51, 51, 61);
+      color: cornsilk;
+      padding: 5px;
+      outline: none;
+    }
+
+    button {
+      background: rgb(51, 51, 61);
+      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+      color: cornsilk;
+      font-size: x-small;
+      border: 2px solid rgba(51, 51, 61, 0.1);
+      outline: none;
+    }
+
+    button:hover {
+      box-shadow: 0px 5px 20px 5px rgb(51, 51, 61);
+      transform: translateY(-2px);
+    }
+
+    #pdf_input_overlay {
+      border-radius: 20px;
+      padding: 5px 15px;
+      margin: 0px 10px;
+    }
+
+    #convert_pdf {
+      font-size: small;
+      padding: 5px 15px;
+      margin: 10px 0px;
+      border-radius: 25px;
+    }
+
+    .text_input {
+      vertical-align: middle;
+    }
+
+    select {
+      border-radius: 15px;
+      border: 2px solid rgba(51, 51, 61, 0.1);
+    }
+
+    #pdf_params_divs_container {
+      width: 75%;
+      margin: 10px auto;
+    }
+
+    #flex_layout {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-wrap: nowrap;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    #pdf_preview_container {
+      margin-bottom: 3px;
+      padding: 3px;
+    }
+
+    #pdf_preview {
+      height: 45vh;
+      max-height: 45vh;
+      width: 100%;
+      border-radius: 10px;
+      border: 3px dashed rgb(30, 185, 128);
+    }
+
+    #acrylic_container {
+      border-radius: 10px;
+      margin-top: 3px;
+      background-color: #045d56;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2000 1500'%3E%3Cdefs%3E%3CradialGradient id='a' gradientUnits='objectBoundingBox'%3E%3Cstop offset='0' stop-color='%231eb980'/%3E%3Cstop offset='1' stop-color='%23045d56'/%3E%3C/radialGradient%3E%3ClinearGradient id='b' gradientUnits='userSpaceOnUse' x1='0' y1='750' x2='1550' y2='750'%3E%3Cstop offset='0' stop-color='%23118b6b'/%3E%3Cstop offset='1' stop-color='%23045d56'/%3E%3C/linearGradient%3E%3Cpath id='s' fill='url(%23b)' d='M1549.2 51.6c-5.4 99.1-20.2 197.6-44.2 293.6c-24.1 96-57.4 189.4-99.3 278.6c-41.9 89.2-92.4 174.1-150.3 253.3c-58 79.2-123.4 152.6-195.1 219c-71.7 66.4-149.6 125.8-232.2 177.2c-82.7 51.4-170.1 94.7-260.7 129.1c-90.6 34.4-184.4 60-279.5 76.3C192.6 1495 96.1 1502 0 1500c96.1-2.1 191.8-13.3 285.4-33.6c93.6-20.2 185-49.5 272.5-87.2c87.6-37.7 171.3-83.8 249.6-137.3c78.4-53.5 151.5-114.5 217.9-181.7c66.5-67.2 126.4-140.7 178.6-218.9c52.3-78.3 96.9-161.4 133-247.9c36.1-86.5 63.8-176.2 82.6-267.6c18.8-91.4 28.6-184.4 29.6-277.4c0.3-27.6 23.2-48.7 50.8-48.4s49.5 21.8 49.2 49.5c0 0.7 0 1.3-0.1 2L1549.2 51.6z'/%3E%3Cg id='g'%3E%3Cuse href='%23s' transform='scale(0.12) rotate(60)'/%3E%3Cuse href='%23s' transform='scale(0.2) rotate(10)'/%3E%3Cuse href='%23s' transform='scale(0.25) rotate(40)'/%3E%3Cuse href='%23s' transform='scale(0.3) rotate(-20)'/%3E%3Cuse href='%23s' transform='scale(0.4) rotate(-30)'/%3E%3Cuse href='%23s' transform='scale(0.5) rotate(20)'/%3E%3Cuse href='%23s' transform='scale(0.6) rotate(60)'/%3E%3Cuse href='%23s' transform='scale(0.7) rotate(10)'/%3E%3Cuse href='%23s' transform='scale(0.835) rotate(-40)'/%3E%3Cuse href='%23s' transform='scale(0.9) rotate(40)'/%3E%3Cuse href='%23s' transform='scale(1.05) rotate(25)'/%3E%3Cuse href='%23s' transform='scale(1.2) rotate(8)'/%3E%3Cuse href='%23s' transform='scale(1.333) rotate(-60)'/%3E%3Cuse href='%23s' transform='scale(1.45) rotate(-30)'/%3E%3Cuse href='%23s' transform='scale(1.6) rotate(10)'/%3E%3C/g%3E%3C/defs%3E%3Cg transform='translate(1020 0)'%3E%3Cg transform='translate(0 705)'%3E%3Ccircle fill='url(%23a)' r='3000'/%3E%3Cg opacity='0.5'%3E%3Ccircle fill='url(%23a)' r='2000'/%3E%3Ccircle fill='url(%23a)' r='1800'/%3E%3Ccircle fill='url(%23a)' r='1700'/%3E%3Ccircle fill='url(%23a)' r='1651'/%3E%3Ccircle fill='url(%23a)' r='1450'/%3E%3Ccircle fill='url(%23a)' r='1250'/%3E%3Ccircle fill='url(%23a)' r='1175'/%3E%3Ccircle fill='url(%23a)' r='900'/%3E%3Ccircle fill='url(%23a)' r='750'/%3E%3Ccircle fill='url(%23a)' r='500'/%3E%3Ccircle fill='url(%23a)' r='380'/%3E%3Ccircle fill='url(%23a)' r='250'/%3E%3C/g%3E%3Cg transform='rotate(-169.2 0 0)'%3E%3Cuse href='%23g' transform='rotate(10)'/%3E%3Cuse href='%23g' transform='rotate(120)'/%3E%3Cuse href='%23g' transform='rotate(240)'/%3E%3C/g%3E%3Ccircle fill-opacity='0.27' fill='url(%23a)' r='3000'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      background-attachment: fixed;
+      background-size: cover;
+      border: 4px solid rgb(30, 185, 128);
+    }
+
+    #log {
+      height: 40vh;
+      max-height: 40vh;
+      width: 99%;
+      padding: 3px;
+      overflow: auto;
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(5px) saturate(125%);
+      color: cornsilk;
+      border-radius: 10px;
+    }
+
+    #gh_logo {
+      height: 7%;
+      width: auto;
+      position: absolute;
+      bottom: 1vh;
+      left: 0;
+      right: 0;
+      margin: auto;
+      opacity: 0.7;
+    }
+
+    #gh_logo:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+
+  <script>
+
+    const log = document.getElementById('log');
+
+    function addLogEntry(message, prompt = '-> ') {
+      var entry = document.createElement('li');
+      entry.style = "list-style: none; font-family: Consolas,SFMono-Regular,Liberation Mono,Menlo,monospace";
+      entry.textContent = prompt + message;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function clearLog() {
+      log.textContent = '';
+      addLogEntry("[Conversion log]", '');
+    }
+
+    function combLog(val) {
+      addLogEntry(val);
+      rlog(val)
+    }
+
+    const rlog = console.log;
+    console.log = combLog;
+
+    var input_scale = 1,
+      input_quality = 0.8,
+      input_format = 'image/png';
+
+    var scale_input = document.getElementById('scale_input');
+    scale_input.addEventListener('input', onScaleInput);
+
+    function onScaleInput() {
+      input_scale = Number(this.value);
+      var output_scale = document.getElementById('output_scale_input');
+      output_scale.value = input_scale;
+    }
+
+    var quality_input = document.getElementById('quality_input');
+    quality_input.addEventListener('input', onQualityInput);
+
+    function onQualityInput() {
+      input_quality = Number(this.value);
+      var output_quality = document.getElementById('output_quality_input');
+      output_quality.value = input_quality;
+    }
+
+    var format_select = document.getElementById('format_select');
+    format_select.addEventListener('change', onFormatSelect);
+
+    function onFormatSelect() {
+      input_format = this.value;
+    }
+
+    var convert_pdf = document.getElementById('convert_pdf');
+    convert_pdf.addEventListener('click', onProcessInputPDF);
+
+
+    function toggleStates(enable) {
+      disabled = !enable;
+      input_pdf.disabled = disabled;
+      format_select.disabled = disabled;
+      quality_input.disabled = disabled;
+      scale_input.disabled = disabled;
+      convert_pdf.disabled = disabled;
+    }
+
+    function updatePreview(url) {
+      document.getElementById('pdf_preview').src = url + '#toolbar=0';
+    }
+
+    function resetPreview() {
+      document.getElementById('pdf_preview').src = 'placeholder/preview.pdf' + '#toolbar=0';
+    }
+
+    var input_pdf = document.getElementById('pdf_input');
+    input_pdf.addEventListener('input', onInputPDF);
+
+    var input_pdf_overlay = document.getElementById('pdf_input_overlay');
+    input_pdf_overlay.addEventListener('click', () => { input_pdf.click() });
+
+    function onInputPDF() {
+
+      var file = this.files[0]
+
+      if (!file) {
+        return;
+      }
+
+      clearLog();
+
+      var selected_file_name = document.getElementById('selected_file_name');
+
+      if (file.type != 'application/pdf') {
+        pdfName = null;
+        pdfFileObject = null;
+        console.log(file.name + " - Unsupported file format, Select a PDF file!!");
+        selected_file_name.value = file.name + " - Unsupported file format!!";
+        resetPreview();
+        return;
+      }
+
+      var fileURL = URL.createObjectURL(file);
+      updatePreview(fileURL);
+
+      pdfName = file['name'];
+      pdfFileObject = file;
+      selected_file_name.value = pdfName;
+
+    }
+
+    function onProcessInputPDF() {
+
+      toggleStates(false);
+      clearLog();
+
+      const reader = new FileReader();
+
+      reader.onload = function (e) {
+        var url = e.target.result;
+        pdf2img(url);
+      }
+      if (pdfFileObject) {
+        reader.readAsDataURL(pdfFileObject);
+      } else {
+        console.log("Error reading file... Choose file again...");
+        toggleStates(true);
+      }
+    }
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min-2.5.207.js';
+
+    var pdfDoc = null,
+      pageNum = 1,
+      pdfFileObject = null,
+      pageRendering = false,
+      pageCount = 0,
+      pageNumPending = null,
+      pageScale = input_scale,
+      pageQuality = input_quality,
+      pageFormat = input_format,
+      imgData = null,
+      pdfName = "doc";
+
+    var canvas = document.getElementById('page_canvas');
+    var ctx = canvas.getContext('2d');
+
+    function pdf2img(pdf_url) {
+      readPDF(pdf_url)
+        .then(() => downloadAll(),
+          () => {
+            console.log("Error reading PDF... May be an encrypted one [-_^]");
+            toggleStates(true);
+          });
+    }
+
+
+    function readPDF(url) {
+      return new Promise((resolve, reject) => {
+        var loadingTask = pdfjsLib.getDocument(url);
+        loadingTask.promise.then(function (pdfDoc_) {
+          pdfDoc = pdfDoc_;
+          resetPDFMetaStore(pdfDoc.numPages);
+          console.log("PDF Loaded: " + pdfName);
+          resolve(1);
+        },
+          () => reject(1));
+      });
+    }
+
+    function resetPDFMetaStore(numPages) {
+      pageCount = numPages;
+      imgData = {};
+      pageNumPending = [];
+      pageScale = input_scale;
+      pageQuality = input_quality;
+      pageFormat = input_format;
+    }
+
+    /**
+     * Get page info from document, resize canvas accordingly, and render page.
+     * @param num Page number.
+     */
+    function renderPage(num) {
+      pageRendering = true;
+      // Using promise to fetch the page
+      pdfDoc.getPage(num).then(function (page) {
+        var viewport = page.getViewport({ scale: pageScale, });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        // Render PDF page into canvas context
+        var renderContext = {
+          canvasContext: ctx,
+          viewport: viewport,
+        };
+        var renderTask = page.render(renderContext);
+
+        // Wait for rendering to finish
+        renderTask.promise.then(function () {
+
+          canvas.toBlob(function (blob) {
+            imgData[num] = blob;
+            console.log("Completed page: " + num);
+            pageRendering = false;
+
+            if (pageNumPending !== null && pageNumPending.length != 0) {
+              // New page rendering is pending
+              renderPage(pageNumPending.shift());
+
+            } else {
+              if (Object.keys(imgData).length == pageCount) {
+                console.log("Rendering complete");
+                processImageData();
+              }
+            }
+          }, pageFormat, pageQuality);
+        });
+      });
+
+
+      console.log("Processing page: " + num);
+    }
+
+    /**
+     * If another page rendering in progress, waits until the rendering is
+     * finised. Otherwise, executes rendering immediately.
+     */
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending.push(num);
+      } else {
+        renderPage(num);
+      }
+    }
+
+    function downloadAll() {
+      for (i = 1; i <= pageCount; i++) {
+        queueRenderPage(i)
+      }
+    }
+
+    function processImageData() {
+      console.log("Creating Zip...");
+      var zip = new JSZip();
+      var pages = zip.folder(pdfName);
+
+      for (i = 1; i <= pageCount; i++) {
+        page = imgData[i]
+        ext = page.type.replace("image/", ".");
+        pages.file("page_" + i + ext, page);
+      }
+
+      zip.generateAsync({ type: "blob" }).then(function (content) {
+        console.log("Downloading Zip...");
+        saveAs(content, pdfName + ".zip");
+        console.log(pdfName + ".zip" + "-Download Complete [-_-]");
+        toggleStates(true);
+      });
+    }
+
+  </script>
+
+</body>
+
+</html>
