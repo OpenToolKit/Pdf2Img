@@ -10,9 +10,7 @@
     content="Free, In-browser, Privacy friendly PDF to image convertor. Supports JPG/JPEG,PNG Image file formats. Your files doesn't leave your browser.">
   <link rel="shortcut icon" type="image/x-icon" href="pdf2img-favicon.ico">
   <link rel="icon" type="image/x-icon" href="pdf2img-favicon.ico">
-  <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100;0,200;0,300;1,100;1,200;1,300&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@200&display=swap" rel="stylesheet">
   <script src="js/pdf.min-2.5.207.js"></script>
   <script src="js/jszip.min-3.5.0.js"></script>
   <script src="js/FileSaver.min-3.5.0.js"></script>
@@ -34,7 +32,7 @@
             <label for="pdf_input">Input file: </label>
             <button id="pdf_input_overlay">Select PDF</button>
             <input id="pdf_input" type="file" accept="application/pdf" style="display:none;">
-            <output style="font-size: xx-small;" id="selected_file_name" for="pdf_input_overlay"></output>
+            <output style="font-size: x-small;" id="selected_file_name" for="pdf_input_overlay"></output>
           </div>
           <div class="pdf_params_divs">
             <label for="format_select">Output image format: </label>
@@ -91,8 +89,8 @@
     }
 
     #title {
-      font-family: 'IBM Plex Sans', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-      font-style: italic;
+      font-family: Raleway, 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      font-style: normal;
       font-weight: 300;
       font-size: 2.5em;
       color: cornsilk;
@@ -100,7 +98,7 @@
     }
 
     #caption {
-      font-family: 'IBM Plex Sans', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+      font-family: Raleway, 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
       font-style: normal;
       font-weight: 200;
       color: cornsilk;
@@ -109,10 +107,10 @@
 
     #home_grid {
       display: grid;
-      grid-column-gap: 20px;
+      grid-column-gap: 25px;
       grid-row-gap: 10px;
       grid-template-rows: auto;
-      grid-template-columns: repeat(auto-fill, minmax(453px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(345px, 1fr));
       padding: 10px;
     }
 
@@ -129,13 +127,22 @@
       background: rgba(0, 0, 0, 0.1);
       max-width: 100%;
       height: 97%;
-      min-height: 80vh;
+      max-height: 90vh;
       border-radius: 10px;
       padding: 5px;
       color: cornsilk;
       border: 4px solid rgb(30, 185, 128);
-      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+      font-family: Raleway, Verdana, Geneva, Tahoma, sans-serif;
       position: relative;
+      overflow: auto;
+    }
+
+    #params_div::-webkit-scrollbar {
+      width: 0 !important
+    }
+
+    #params_div {
+      scrollbar-width: none;
     }
 
     .pdf_params_divs {
@@ -145,7 +152,7 @@
     label {
       font-size: small;
       font-weight: normal;
-      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+      font-family: Raleway, Verdana, Geneva, Tahoma, sans-serif;
     }
 
     #format_select {
@@ -154,11 +161,13 @@
       color: cornsilk;
       padding: 5px;
       outline: none;
+      font-weight: normal;
+      font-family: Raleway, Verdana, Geneva, Tahoma, sans-serif;
     }
 
     button {
       background: rgb(51, 51, 61);
-      font-family: 'IBM Plex Sans', Verdana, Geneva, Tahoma, sans-serif;
+      font-family: Raleway, Verdana, Geneva, Tahoma, sans-serif;
       color: cornsilk;
       font-size: x-small;
       border: 2px solid rgba(51, 51, 61, 0.1);
@@ -242,14 +251,10 @@
     }
 
     #gh_logo {
-      height: 7%;
-      width: auto;
-      position: absolute;
-      bottom: 1vh;
-      left: 0;
-      right: 0;
-      margin: auto;
+      height: 60px;
+      width: 60px;
       opacity: 0.7;
+      margin: 10px;
     }
 
     #gh_logo:hover {
@@ -370,8 +375,14 @@
 
     function onProcessInputPDF() {
 
+      if (!pdfFileObject) {
+        return;
+      }
+
       toggleStates(false);
       clearLog();
+
+      console.log("Loading selected file...");
 
       const reader = new FileReader();
 
@@ -416,11 +427,13 @@
 
     function readPDF(url) {
       return new Promise((resolve, reject) => {
+        var selected_file_name = document.getElementById('selected_file_name');
         var loadingTask = pdfjsLib.getDocument(url);
         loadingTask.promise.then(function (pdfDoc_) {
           pdfDoc = pdfDoc_;
           resetPDFMetaStore(pdfDoc.numPages);
           console.log("PDF Loaded: " + pdfName);
+          selected_file_name.value += ' - ' + pageCount + ' Pages';
           resolve(1);
         },
           () => reject(1));
@@ -477,7 +490,6 @@
         });
       });
 
-
       console.log("Processing page: " + num);
     }
 
@@ -505,9 +517,10 @@
       var pages = zip.folder(pdfName);
 
       for (i = 1; i <= pageCount; i++) {
-        page = imgData[i]
-        ext = page.type.replace("image/", ".");
-        pages.file("page_" + i + ext, page);
+        var page = imgData[i];
+        var ext = page.type.replace("image/", ".");
+        var pdfNameNoExt = pdfName.slice(0, -4);
+        pages.file(pdfNameNoExt + "_page_" + i + ext, page);
       }
 
       zip.generateAsync({ type: "blob" }).then(function (content) {
